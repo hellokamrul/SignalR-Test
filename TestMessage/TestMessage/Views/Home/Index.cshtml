@@ -1,0 +1,61 @@
+﻿@{
+    ViewData["Title"] = "Chat";
+}
+
+<h2>Chat</h2>
+
+<div id="messageList"></div>
+
+<input type="text" id="messageInput" placeholder="Type your message..." />
+<button id="sendButton">Send</button>
+
+@section scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.10/signalr.min.js"></script> <!-- Added reference to signalr.js -->
+
+    <script>
+        $(function () {
+            var connection = new signalR.HubConnectionBuilder().withUrl("/chathub").build();
+
+            connection.on("ReceiveMessage", function (content, userName) {
+                var message = "<p><strong>" + userName + ": </strong>" + content + "</p>";
+                $("#messageList").append(message);
+            });
+
+            connection.on("UserJoined", function (userName) {
+                var message = "<p><em>" + userName + " joined the chat.</em></p>";
+                $("#messageList").append(message);
+            });
+
+            connection.on("UserLeft", function (userName) {
+                var message = "<p><em>" + userName + " left the chat.</em></p>";
+                $("#messageList").append(message);
+            });
+
+            connection.on("CreateGroup", function (groupName) {
+                var link = "<p><a href='" + "/Chat/JoinGroup?groupName=" + encodeURIComponent(groupName) + "'>" + groupName + "</a></p>"; // Updated link generation
+                $("#messageList").append(link);
+            });
+
+            connection.start().then(function () {
+                $("#sendButton").click(function () {
+                    var content = $("#messageInput").val();
+                    var groupName = "Gtr"; // Specify the group name here
+                    var userName = "nijum"; // Specify the user name here
+
+                    connection.invoke("SendMessage", content, groupName, userName).catch(function (err) {
+                        console.error(err);
+                    });
+
+                    $("#messageInput").val("");
+                });
+
+                connection.invoke("JoinGroup", "CreateGroup").catch(function (err) {
+                    console.error(err);
+                });
+            }).catch(function (err) {
+                console.error(err);
+            });
+        });
+    </script>
+}
